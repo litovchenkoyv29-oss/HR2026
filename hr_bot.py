@@ -11,8 +11,8 @@ ADMIN_CHAT_ID = 941204658  # ваш chat_id
 logging.basicConfig(level=logging.INFO)
 
 # Шаги диалога
-(CITIZENSHIP, WORK_PERMIT, GENDER, AGE,
- JOB_TYPE, CRIMINAL, MED_BOOK, FIO, CONTACT) = range(9)
+(CONSENT, CITIZENSHIP, WORK_PERMIT, GENDER, AGE,
+ JOB_TYPE, CRIMINAL, MED_BOOK, FIO, CONTACT) = range(10)
 
 def kb(options):
     return ReplyKeyboardMarkup([[o] for o in options], resize_keyboard=True, one_time_keyboard=True)
@@ -23,8 +23,24 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         "👋 Здравствуйте!\n\n"
         "Я помогу подобрать подходящую работу. Задам несколько коротких вопросов — "
         "это займёт около 2 минут.\n\n"
-        "Ваши данные получит HR-специалист и свяжется с вами лично.\n\n"
-        "Начнём? Нажмите /start ещё раз или ответьте на первый вопрос 👇\n\n"
+        "📋 Для продолжения необходимо ваше согласие на обработку персональных данных "
+        "в соответствии с Федеральным законом №152-ФЗ «О персональных данных».\n\n"
+        "Ваши данные используются исключительно для подбора вакансий и не передаются третьим лицам.\n\n"
+        "Вы согласны?",
+        reply_markup=kb(["✅ Согласен(на)", "❌ Не согласен(на)"])
+    )
+    return CONSENT
+
+async def consent(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if update.message.text == "❌ Не согласен(на)":
+        await update.message.reply_text(
+            "Без согласия на обработку персональных данных мы не можем продолжить.\n\n"
+            "Если передумаете — напишите /start.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return ConversationHandler.END
+    await update.message.reply_text(
+        "✅ Спасибо! Согласие получено.\n\n"
         "🌍 Ваше гражданство?",
         reply_markup=kb(["🇷🇺 РФ", "🌐 Другое"])
     )
@@ -155,6 +171,7 @@ def main():
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
+            CONSENT:     [MessageHandler(filters.TEXT & ~filters.COMMAND, consent)],
             CITIZENSHIP: [MessageHandler(filters.TEXT & ~filters.COMMAND, citizenship)],
             WORK_PERMIT: [MessageHandler(filters.TEXT & ~filters.COMMAND, work_permit)],
             GENDER:      [MessageHandler(filters.TEXT & ~filters.COMMAND, gender)],
